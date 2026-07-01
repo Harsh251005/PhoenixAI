@@ -4,7 +4,7 @@ from src.model.schema import State
 def main():
     graph = graph_builder()
 
-    user_input = "Build a simple accounts management system"
+    user_input = "create a library management system for a school with predefined books in json format"
 
     graph.invoke(
         State(

@@ -1,4 +1,5 @@
 from src.config.settings import settings
+from src.model.schema import State
 
 CODER_PROMPT = f"""
 You are an expert Python engineer. Given a task description, generate a single, complete, runnable Python file that solves it.
@@ -20,11 +21,32 @@ Rules:
 8. No placeholder code, no TODOs, no pseudo-code — the file must run as-is.
 9. Keep functions short (~20-30 lines max); if longer, split further.
 10. Output ONLY the raw Python code. No explanations, no markdown fences, no commentary before/after.
-11. NEVER use input(), interactive prompts, or anything that blocks waiting for user input via stdin. 
-    The code runs in a non-interactive subprocess with no terminal attached.
-    - If the task needs sample/test data, hardcode reasonable defaults directly in the code.
-    - If the task genuinely needs configurable values, use command-line arguments via argparse with sensible defaults, so the file runs standalone with zero manual input.
-    - If simulating a CLI tool, accept input via function parameters or a config dict, not input().
 
 Prioritize correctness and readability over cleverness.
 """
+
+def build_coder_prompt(state: State) -> str:
+    """Build the user prompt for the coder agent — fresh task or fix-mode."""
+
+    if state.executor is None or state.executor.error_summary is None:
+        return f"Task: {state.user_input}"
+
+    prompt = f"""Task: {state.user_input}
+
+The following code was generated for this task but failed during execution.
+
+--- PREVIOUS CODE ---
+{state.project.file.file_content}
+
+--- ERROR SUMMARY ---
+{state.executor.error_summary}
+
+--- FULL TRACEBACK (stderr) ---
+{state.executor.stderr}
+
+--- STDOUT BEFORE FAILURE ---
+{state.executor.stdout}
+
+This is attempt {state.executor.retry_count + 1}. Analyze the root cause and rewrite the ENTIRE file with the fix applied. Do not just patch around the error — ensure the fix is correct and complete. Do not repeat the same mistake as before."""
+
+    return prompt

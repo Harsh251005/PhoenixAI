@@ -1,6 +1,6 @@
 from src.config.settings import settings
 from src.model.schema import State, ProjectOutput
-from src.prompts.coder_prompt import CODER_PROMPT
+from src.prompts.coder_prompt import CODER_PROMPT, build_coder_prompt
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -13,10 +13,15 @@ def coder_node(state: State) -> State:
 
     print("CODER AGENT IN PROGRESS...")
 
+    if state.executor is not None:
+        print(f"ATTEMPT: {state.executor.retry_count}")
+
+    user_prompt = build_coder_prompt(state)
+
     result = structured_llm.invoke(
         [
             SystemMessage(content=CODER_PROMPT),
-            HumanMessage(content=state.user_input)
+            HumanMessage(content=user_prompt)
         ]
     )
 

@@ -17,11 +17,38 @@ def executor_node(state: State) -> State:
         task=state.user_input,
         code=state.project.file.file_content,
         file_path=file_path,
+        retry_count=getattr(state.executor, "retry_count", 0),
         **result
     )
 
     return state
 
+def route_after_execution(state: State) -> str:
+    if state.executor.success:
+        print("\nTHE CODE WAS SUCCESSFULLY GENERATED AND EXECUTED\n")
+        return "done"
+
+    if state.executor.retry_count >= 3:
+        print(f"\nTHE CODER AGENT COULD NOT SOLVE THE ERROR:{state.executor.error_summary}\n")
+        return "give_up"
+
+    print("\nFOUND ERROR!\nREDIRECTING TO CODER AGENT\n")
+
+    return "retry_coder"
+
+def increment_retry(state: State):
+
+    new_executor = state.executor.model_copy(
+        update={
+            "retry_count": state.executor.retry_count + 1
+        }
+    )
+
+    print(f"\n{'-' * 100}\n")
+
+    return {
+        "executor": new_executor
+    }
 
 
 def execute_and_diagnose(file_path: str, timeout: int = 30) -> dict:
@@ -29,12 +56,14 @@ def execute_and_diagnose(file_path: str, timeout: int = 30) -> dict:
     path = Path(file_path).resolve()
 
     if not path.exists():
+        print(f"Path does not exist: {path}")
+
         return {
             "success": False,
             "stdout": "",
             "stderr": "",
             "exit_code": -1,
-            "error_summary": f"File not found: {path}",
+            "error_summary": f"File not found: {path}"
         }
 
     try:
@@ -52,10 +81,13 @@ def execute_and_diagnose(file_path: str, timeout: int = 30) -> dict:
         error_summary = None
         if not success:
             last_line = stderr_lines[-1] if stderr_lines else "Unknown error"
+            print(f"ERROR: {last_line}")
             if "EOFError" in result.stderr:
                 error_summary = "Code called input() or similar blocking stdin read — not allowed in subprocess execution. Remove all input() calls and use hardcoded values or argparse instead."
+                print(f"ERROR: {error_summary}")
             else:
                 error_summary = last_line
+                print(f"ERROR: {error_summary}")
 
         return {
             "success": success,
@@ -66,19 +98,25 @@ def execute_and_diagnose(file_path: str, timeout: int = 30) -> dict:
         }
 
     except subprocess.TimeoutExpired as e:
+        error_summary = f"Execution timed out after {timeout}s — check for infinite loops or blocking calls."
+        print(f"ERROR: {error_summary}")
+
         return {
             "success": False,
             "stdout": e.stdout or "",
             "stderr": e.stderr or "",
             "exit_code": -1,
-            "error_summary": f"Execution timed out after {timeout}s — check for infinite loops or blocking calls.",
+            "error_summary": error_summary
         }
 
     except Exception as e:
+        error_summary = f"Executor crashed: {e}"
+        print(f"ERROR: {error_summary}")
+
         return {
             "success": False,
             "stdout": "",
             "stderr": str(e),
             "exit_code": -1,
-            "error_summary": f"Executor crashed: {e}",
+            "error_summary": error_summary
         }

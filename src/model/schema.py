@@ -24,9 +24,9 @@ class ExecutorResult(BaseModel):
     stderr: str  # captured stderr from execution
     exit_code: int  # process exit code
     success: bool  # whether execution succeeded
-    error_summary: Optional[str]  # last traceback line, for quick context
+    error_summary: Optional[str] = None  # last traceback line, for quick context
 
-    # retry_count: int  # number of retry attempts so far
+    retry_count: int = Field(default=0)  # number of retry attempts so far
 
 
 class State(BaseModel):
