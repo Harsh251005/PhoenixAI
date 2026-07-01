@@ -4,9 +4,9 @@ from src.model.schema import State
 def main():
     graph = graph_builder()
 
-    user_input = "Create 2 simple agents using langgraph"
+    user_input = "Build a simple accounts management system"
 
-    result = graph.invoke(
+    graph.invoke(
         State(
             user_input=user_input
         )

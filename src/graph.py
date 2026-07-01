@@ -1,5 +1,6 @@
 from src.agents.coder import coder_node
 from src.agents.writer import writer_node
+from src.agents.executor import executor_node
 from src.model.schema import State
 
 from langgraph.graph import StateGraph, START, END
@@ -9,10 +10,12 @@ def graph_builder():
 
     builder.add_node("coder", coder_node)
     builder.add_node("writer", writer_node)
+    builder.add_node("executor", executor_node)
 
     builder.add_edge(START, "coder")
     builder.add_edge("coder", "writer")
-    builder.add_edge("writer", END)
+    builder.add_edge("writer", "executor")
+    builder.add_edge("executor", END)
 
     graph = builder.compile()
 
@@ -28,4 +31,4 @@ def save_graph(graph) -> None:
     with open("langgraph.png", "wb") as f:
         f.write(png_data)
 
-    print("Graph saved to langgraph.png")
+    print("Graph saved to langgraph.png\n")
