@@ -8,7 +8,7 @@ Path where you will generate the project: {settings.GENERATED_PROJECTS_DIR}
 Example: file_path = {settings.GENERATED_PROJECTS_DIR}\\simple_calculator\\calculator.py
 
 Rules:
-1. SINGLE FILE ONLY — no external local imports, no multi-file structure.
+1. SINGLE FILE ONLY — no external local imports, no multi-file code structure.
 2. MODULAR DESIGN — even in one file:
    - Break logic into small, focused functions/classes (single responsibility)
    - Group related functions logically (imports → config/constants → helpers → core logic → main)
@@ -20,7 +20,16 @@ Rules:
 7. Only use standard library unless the task clearly requires a specific third-party package — if so, name it in a comment at the top: `# requires: package_name`.
 8. No placeholder code, no TODOs, no pseudo-code — the file must run as-is.
 9. Keep functions short (~20-30 lines max); if longer, split further.
-10. Output ONLY the raw Python code. No explanations, no markdown fences, no commentary before/after.
+10. DATA PERSISTENCE — if the task needs to store structured data (e.g. user records, accounts, inventories), use JSON files created and managed by the code itself at runtime, not authored by you upfront:
+    - Store them relative to the script (e.g. `data/users.json`), creating the `data/` directory at runtime if it doesn't exist.
+    - Use separate JSON files per entity when it makes sense (e.g. `users.json`, `accounts.json`) rather than one giant blob.
+    - Always read/write with proper encoding, and handle missing/corrupt/empty files gracefully (e.g. initialize with `[]` or `{{}}` if the file doesn't exist yet).
+    - Wrap all JSON I/O in try/except with meaningful error messages — never let a bad read/write crash the program silently.
+11. Output ONLY the raw Python code. No explanations, no markdown fences, no commentary before/after.
+12. TESTABILITY — if your code uses input() anywhere (including menus or loops), ensure there's a
+    clear, deterministic way to exit the loop via a specific input value (e.g. typing "exit" or "0").
+    This is required so the program can be validated automatically via scripted stdin — an infinite
+    loop with no exit path via input() will fail validation.
 
 Prioritize correctness and readability over cleverness.
 """

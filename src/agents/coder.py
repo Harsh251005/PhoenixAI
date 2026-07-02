@@ -9,7 +9,7 @@ llm = ChatOpenAI(model=settings.OPENAI_MODEL_NAME, api_key=settings.OPENAI_API_K
 
 structured_llm = llm.with_structured_output(ProjectOutput)
 
-def coder_node(state: State) -> State:
+def coder_node(state: State) -> dict:
 
     print("CODER AGENT IN PROGRESS...")
 
@@ -25,6 +25,9 @@ def coder_node(state: State) -> State:
         ]
     )
 
-    state.project = result
+    if state.project is not None:
+        print(f"PROJECT STATE\n{state.project}")
 
-    return state
+    return {
+        "project": result
+    }

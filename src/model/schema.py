@@ -1,11 +1,24 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 
 
 class GeneratedFile(BaseModel):
     file_path: str = Field(description="Complete path to the file")
     file_name: str = Field(description="Name of the generated Python file")
     file_content: str = Field(description="Complete code for the file")
+    file_inputs: List[str] = Field(
+        description=(
+            "Concrete stdin values needed to run this program to completion via subprocess, "
+            "in the exact order the program's input() calls will consume them. "
+            "If the code contains ANY input() calls — including menu loops, REPLs, or "
+            "prompts — you MUST provide a full realistic sequence of values that exercises "
+            "the program (e.g. select a menu option, provide required data, then an exit "
+            "command if the loop needs one to terminate). Only leave this empty if the code "
+            "contains zero input() calls. Do not skip this because the program 'is interactive' "
+            "— interactive programs still need scripted stdin to be validated."
+        )
+    )
+    file_inputs_reason: str = Field(description="Reason for the input of each line of the file. If inputs not provided, give the reason for not providing it")
 
 
 class ProjectOutput(BaseModel):

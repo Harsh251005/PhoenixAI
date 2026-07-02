@@ -7,6 +7,8 @@ def writer_node(state: State) -> State:
 
     print("WRITER AGENT IN PROGRESS...")
 
+    print(f"PROJECT STATE\n{state.project}")
+
     settings.GENERATED_PROJECTS_DIR.mkdir(
         parents=True,
         exist_ok=True

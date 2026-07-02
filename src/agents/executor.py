@@ -11,7 +11,16 @@ def executor_node(state: State) -> State:
 
     file_path = state.project.file.file_path
 
-    result = execute_and_diagnose(file_path)
+    file_input_list = state.project.file.file_inputs
+
+    file_input_data = ""
+
+    for input_data in file_input_list:
+        file_input_data += input_data + "\n"
+
+    print(f"FILE_INPUT_LIST: {file_input_list}\nFILE_INPUT_DATA: {file_input_data}\n")
+
+    result = execute_and_diagnose(file_path, file_input_data)
 
     state.executor = ExecutorResult(
         task=state.user_input,
@@ -20,6 +29,8 @@ def executor_node(state: State) -> State:
         retry_count=getattr(state.executor, "retry_count", 0),
         **result
     )
+
+    print(f"\nEXECUTOR STATE:\n{state.executor}\n")
 
     return state
 
@@ -51,7 +62,7 @@ def increment_retry(state: State):
     }
 
 
-def execute_and_diagnose(file_path: str, timeout: int = 30) -> dict:
+def execute_and_diagnose(file_path: str, file_input_data, timeout: int = 30) -> dict:
     """Run a Python file and return execution results + error context for the coder agent to fix."""
     path = Path(file_path).resolve()
 
@@ -70,10 +81,10 @@ def execute_and_diagnose(file_path: str, timeout: int = 30) -> dict:
         result = subprocess.run(
             [sys.executable, str(path)],
             cwd=path.parent,
+            input=file_input_data,
             capture_output=True,
             text=True,
             timeout=timeout,
-            stdin=subprocess.DEVNULL
         )
         success = result.returncode == 0
         stderr_lines = [l for l in result.stderr.strip().splitlines() if l.strip()]
