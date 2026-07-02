@@ -21,11 +21,29 @@ class GeneratedFile(BaseModel):
     file_inputs_reason: str = Field(description="Reason for the input of each line of the file. If inputs not provided, give the reason for not providing it")
 
 
+class Errors(BaseModel):
+    success: bool = Field(description="Whether the execution was successful")
+    error_summary: str = Field(description="Summary of the error")
+    stdout: str = Field(description="The stdout of the execution")
+    stderr: str = Field(description="The stderr of the execution")
+
+
+class CoderDocumentation(BaseModel):
+    attempt: int = Field(description="Current number of attempt")
+    errors: List[Errors] = Field(default=None, description="List of errors occurred. Do not populate this in the initial stage. Only populate this when you have got errors")
+    stage: str = Field(description="Stage of the code like initial stage, attempt 1, attempt 2, etc")
+    goal: str = Field(description="The end goal that is required to be achieved")
+    actions: List[str] = Field(description="List of actions taken in this step")
+    decision: List[str] = Field(description="Key decisions taken in this step along with reasoning")
+    expected_outcome: str = Field(description="Expected outcome after this step")
+
+
 class ProjectOutput(BaseModel):
     project_name: str = Field(description="Folder name for the project")
     project_directory: str = Field(description="Complete path to the folder where the project was generated")
     description: str = Field(description="Short project description")
     file: GeneratedFile
+    coder_documentation: CoderDocumentation = Field(description="Documentation of the coder")
 
 
 class ExecutorResult(BaseModel):
@@ -42,6 +60,16 @@ class ExecutorResult(BaseModel):
     retry_count: int = Field(default=0)  # number of retry attempts so far
 
 
+class KnowledgeState(BaseModel):
+    task: str
+    success: bool = Field(description="Whether the execution was successful")
+    attempts: int = Field(description="Number of total attempts")
+    design_decisions: List[str] = Field(description="Design decisions that helped in success of the code")
+    lesson: List[str] = Field(description="Lessons learnt while developing the project which would help in later projects")
+
+
+
+# Main Agent State
 class State(BaseModel):
     user_input: str = Field(
         description="Original user request."
