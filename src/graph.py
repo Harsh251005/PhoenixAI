@@ -1,6 +1,6 @@
 from src.agents.coder import coder_node
 from src.agents.writer import writer_node
-from src.agents.executor import executor_node, route_after_execution, increment_retry
+from src.agents.executor import executor_node, route_after_execution
 from src.model.schema import State
 
 from langgraph.graph import StateGraph, START, END
@@ -11,7 +11,7 @@ def graph_builder():
     builder.add_node("coder", coder_node)
     builder.add_node("writer", writer_node)
     builder.add_node("executor", executor_node)
-    builder.add_node("increment_retry", increment_retry)
+
 
     builder.add_edge(START, "coder")
     builder.add_edge("coder", "writer")
@@ -23,11 +23,9 @@ def graph_builder():
         {
             "done": END,
             "give_up": END,
-            "retry_coder": "increment_retry",
+            "retry_coder": "coder",
         }
     )
-
-    builder.add_edge("increment_retry", "coder")
 
     graph = builder.compile()
 

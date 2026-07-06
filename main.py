@@ -34,12 +34,9 @@ def main() -> None:
     print(BANNER)
     graph = graph_builder()
 
-    while True:
-        task = get_user_input()
-        if task.lower() in {"exit", "quit", "q"}:
-            print("\n👋 Goodbye!\n")
-            break
-        run_task(graph, task)
+    task = get_user_input()
+
+    run_task(graph, task)
 
 
 if __name__ == "__main__":
