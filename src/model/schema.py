@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 
 class GeneratedFile(BaseModel):
@@ -17,6 +17,19 @@ class GeneratedFile(BaseModel):
     )
     file_content: str = Field(
         description="Full, complete, runnable source code content of the file."
+    )
+
+
+class FixOutput(BaseModel):
+    """Used on fix-mode retries — the LLM returns ONLY the files it changed."""
+
+    fixed_files: list[GeneratedFile] = Field(
+        description=(
+            "Only the files that were modified to fix the error. Each file_path here "
+            "must exactly match a file_path from the problematic files shown to you. "
+            "Do not include files you did not change. Do not invent new file paths "
+            "unless a new file is genuinely required to fix the bug."
+        )
     )
 
 
@@ -65,47 +78,15 @@ class ProjectOutput(BaseModel):
             "— interactive programs still need scripted stdin to be validated."
         )
     )
-    file_inputs_reason: str = Field(
-        description=(
-            "A line-by-line justification for each value in file_inputs, explaining which "
-            "input() call it satisfies and why that value was chosen (e.g. 'Line 1: \"2\" "
-            "selects menu option 2 (Add Expense)'). If file_inputs is empty, explicitly state "
-            "why — e.g. 'No input() calls present in the code, so no stdin is required.' "
-            "Never leave this blank."
-        )
-    )
-
-
-class Errors(BaseModel):
-    success: bool = Field(
-        description=(
-            "True only if this specific execution attempt ran to completion with exit code 0 "
-            "and no unhandled exceptions or traceback in stderr. False for any crash, "
-            "traceback, non-zero exit code, or hang that had to be killed."
-        )
-    )
-    error_summary: str = Field(
-        description=(
-            "A concise, human-readable summary of what went wrong (e.g. exception type and "
-            "message, such as 'TypeError: unsupported operand type(s) for +: int and str "
-            "on line 42'). If success is True, state 'No errors' rather than leaving this vague."
-        )
-    )
-    stdout: str = Field(
-        description=(
-            "The exact, unmodified standard output captured from running the program. "
-            "Do not paraphrase or truncate meaningfully — preserve it as-is for debugging context."
-        )
-    )
-    stderr: str = Field(
-        description=(
-            "The exact, unmodified standard error output (including full traceback if any) "
-            "captured from running the program. Empty string if nothing was written to stderr."
-        )
-    )
-
-
-
+    # file_inputs_reason: str = Field(
+    #     description=(
+    #         "A line-by-line justification for each value in file_inputs, explaining which "
+    #         "input() call it satisfies and why that value was chosen (e.g. 'Line 1: \"2\" "
+    #         "selects menu option 2 (Add Expense)'). If file_inputs is empty, explicitly state "
+    #         "why — e.g. 'No input() calls present in the code, so no stdin is required.' "
+    #         "Never leave this blank."
+    #     )
+    # )
 
 
 class ExecutorResult(BaseModel):
@@ -152,12 +133,30 @@ class ExecutorResult(BaseModel):
             "context without reading the full stderr. Leave as None when success is True."
         )
     )
-    retry_count: int = Field(
-        default=0,
+
+
+class CriticDecision(BaseModel):
+    status: Literal["pass", "fail"] = Field(
         description=(
-            "The number of retry attempts already made to fix and re-run this piece of code "
-            "before this result. Starts at 0 for the first execution attempt and increments "
-            "by 1 on each subsequent retry."
+            "'pass' if the code executed successfully and correctly fulfills the task. "
+            "'fail' if there was an execution error, incorrect output, or the task "
+            "was not properly fulfilled, or requires the coder agent to fix the code."
+        )
+    )
+    reasoning: str = Field(
+        description=(
+            "1-3 sentence explanation of the decision — what worked or what's wrong, "
+            "and why the flagged files (if any) are the likely root cause."
+        )
+    )
+    problematic_files: list[str] = Field(
+        default_factory=list,
+        description=(
+            "List of file_path values (exactly as given in the input files) that need to be "
+            "fixed to resolve the failure. Only include files that actually need changes — "
+            "e.g. the file where the traceback originates, or a file with clearly wrong logic. "
+            "Must be empty if status is 'pass'. Must contain at least one valid file_path "
+            "from the given file list if status is 'fail'."
         )
     )
 
@@ -185,5 +184,18 @@ class State(BaseModel):
         description=(
             "The result of executing project.file against project.file.file_inputs, including "
             "stdout/stderr and success status. None until the executor node has run."
+        )
+    )
+
+    critic: CriticDecision | None = Field(
+        default=None,
+    )
+
+    retry_fix: int = Field(
+        default=0,
+        description=(
+            Field(
+                "Number of retry attempts"
+            )
         )
     )

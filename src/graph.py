@@ -1,6 +1,7 @@
 from src.agents.coder import coder_node
 from src.agents.writer import writer_node
-from src.agents.executor import executor_node, route_after_execution
+from src.agents.executor import executor_node, route_to_critic
+from src.agents.critic import critic_node, route_from_critic_to_coder
 from src.model.schema import State
 
 from langgraph.graph import StateGraph, START, END
@@ -11,6 +12,7 @@ def graph_builder():
     builder.add_node("coder", coder_node)
     builder.add_node("writer", writer_node)
     builder.add_node("executor", executor_node)
+    builder.add_node("critic", critic_node)
 
 
     builder.add_edge(START, "coder")
@@ -19,11 +21,21 @@ def graph_builder():
 
     builder.add_conditional_edges(
         "executor",
-        route_after_execution,
+        route_to_critic,
         {
-            "done": END,
-            "give_up": END,
-            "retry_coder": "coder",
+            "DONE": END,
+            "CRITIC": "critic"
+        }
+    )
+
+
+    builder.add_conditional_edges(
+        "critic",
+        route_from_critic_to_coder,
+        {
+            "DONE": END,
+            "GIVE_UP": END,
+            "RETRY": "coder"
         }
     )
 
@@ -32,7 +44,6 @@ def graph_builder():
     save_graph(graph)
 
     return graph
-
 
 
 def save_graph(graph) -> None:

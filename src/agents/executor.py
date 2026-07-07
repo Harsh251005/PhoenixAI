@@ -12,6 +12,9 @@ def executor_node(state: State) -> State:
 
     print("EXECUTOR AGENT IN PROGRESS...")
 
+    if state.project is None:
+        raise ValueError("[EXECUTOR] Project has not been generated yet")
+
     entry_file_path = state.project.entry_point
 
     file_input_list = state.project.file_inputs
@@ -21,43 +24,17 @@ def executor_node(state: State) -> State:
     for input_data in file_input_list:
         file_input_data += input_data + "\n"
 
-    retry_count = getattr(state.executor, "retry_count", 0)
+    retry_count = getattr(state, "retry_fix", 0)
 
     result = execute_and_diagnose(entry_file_path, file_input_data, retry_count=retry_count)
 
     state.executor = ExecutorResult(
         task=state.user_input,
         file_path=entry_file_path,
-        retry_count=retry_count,
         **result
     )
 
-    print(f"FINAL AGENT STATE:\n{json.dumps(state.model_dump(), indent=4)}")
-
     return state
-
-
-def route_after_execution(state: State) -> str:
-    if state.executor.success:
-        print("\nTHE CODE WAS SUCCESSFULLY GENERATED AND EXECUTED\n")
-        return "done"
-
-    if state.executor.retry_count >= 3:
-        print(
-            f"\nTHE CODER AGENT COULD NOT SOLVE THE ERROR:\n"
-            f"{state.executor.error_summary}\n"
-        )
-        return "give_up"
-
-    state.executor.retry_count += 1
-
-    print(
-        f"\nFOUND ERROR!\n"
-        f"STARTING REPAIR ATTEMPT #{state.executor.retry_count}\n"
-    )
-    print(f"\n{'=' * 120}\n")
-
-    return "retry_coder"
 
 
 @traceable(run_type="tool", name="run_subprocess")
@@ -99,7 +76,7 @@ def diagnose_error(exec_result: dict) -> dict:
 
 
 @traceable(name="execute_and_diagnose")
-def execute_and_diagnose(file_path: str, file_input_data: str, timeout: int = 30, retry_count: int = 0) -> dict:
+def execute_and_diagnose(file_path: str, file_input_data: str, timeout: int = 7, retry_count: int = 0) -> dict:
     """Run a Python file and return execution results + error context for the coder agent to fix."""
 
     run = get_current_run_tree()
@@ -146,3 +123,14 @@ def execute_and_diagnose(file_path: str, file_input_data: str, timeout: int = 30
             "exit_code": -1,
             "error_summary": error_summary
         }
+
+def route_to_critic(state: State) -> str:
+    """Route to CRITIC if the executor result shows errors, failures, or warnings."""
+
+    if state.executor is None:
+        raise ValueError("[EXECUTOR] Executor is None")
+
+    if state.executor.success:
+        return "DONE"
+
+    return "CRITIC"

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "bbfd4ba5-f85a-4bb9-a27b-506012f278e2",
+    "owner": "Alice",
+    "balance": 50075.5,
+    "currency": "USD",
+    "created_at": "2026-07-06T13:09:12.680630"
+  },
+  {
+    "id": "2477f0d5-48ac-4f49-83f6-6e7576ce0af5",
+    "owner": "Harsh",
+    "balance": 9e+19,
+    "currency": "POUNDS",
+    "created_at": "2026-07-06T13:10:43.586658"
+  }
+]

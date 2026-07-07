@@ -8,6 +8,9 @@ def writer_node(state: State) -> State:
 
     print("WRITER AGENT IN PROGRESS...")
 
+    if state.project is None:
+        raise ValueError("[WRITER] Project is None")
+
 
     settings.GENERATED_PROJECTS_DIR.mkdir(
         parents=True,
@@ -16,7 +19,7 @@ def writer_node(state: State) -> State:
 
     if state.project.project_name is None:
         raise ValueError(
-            "No project generated."
+            "[WRITER] No project generated."
         )
 
     project_dir = (

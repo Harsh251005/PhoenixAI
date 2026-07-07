@@ -65,21 +65,32 @@ Prioritize correctness and readability over cleverness.
 
 
 def build_coder_prompt(state) -> str:
-    """Build the user prompt for the coder agent — fresh task or fix-mode."""
+    """Build the user prompt for the coder agent — fresh task or targeted fix-mode."""
 
     if state.executor is None or state.executor.error_summary is None:
         return f"Task: {state.user_input}"
 
-    current_files = "\n\n".join(
-        f"--- FILE: {f.file_path} ---\n{f.content}"
+    flagged_paths = state.critic.problematic_files
+
+    files_to_fix = "\n\n".join(
+        f"--- FILE: {f.file_path} ---\n{f.file_content}"
         for f in state.project.files
+        if f.file_path in flagged_paths
+    )
+
+    other_files = [f.file_path for f in state.project.files if f.file_path not in flagged_paths]
+    other_files_note = (
+        f"\n\n--- OTHER PROJECT FILES (unchanged, not shown — do not recreate these) ---\n"
+        + "\n".join(other_files)
+        if other_files else ""
     )
 
     return f"""Task: {state.user_input}
 
-The generated project failed to execute. You have no tools — everything you need is below.
+The generated project failed to execute. The critic identified the following file(s)
+as the likely root cause — only these are shown in full below.
 
---- ERROR SUMMARY ---
+--- ERROR SUMMARY (from critic) ---
 {state.executor.error_summary}
 
 --- FULL TRACEBACK (stderr) ---
@@ -88,16 +99,18 @@ The generated project failed to execute. You have no tools — everything you ne
 --- STDOUT BEFORE FAILURE ---
 {state.executor.stdout}
 
---- CURRENT PROJECT FILES (full contents) ---
-{current_files}
+--- CRITIC REASONING ---
+{state.critic.reasoning}
+
+--- FILES TO FIX (full contents) ---
+{files_to_fix}{other_files_note}
 
 RULES
-- Diagnose the root cause across the files above before fixing — do not guess-patch symptoms.
-- Return the COMPLETE set of project files in your structured output, not just the changed ones.
-  Files you don't need to change must be returned unchanged and in full.
-- Do not introduce new files unless the fix genuinely requires restructuring.
-- Do not repeat any fix already attempted in this conversation history.
-- Do not modify the task requirements — only fix the execution failure.
+- Only rewrite the files shown under "FILES TO FIX" — return corrected content for exactly those.
+- Do not modify or recreate files listed under "OTHER PROJECT FILES" — they are correct and
+  must be left untouched by the writer.
+- Diagnose the root cause across the shown file(s) before fixing — do not guess-patch symptoms.
+- Do not repeat any fix already attempted in this conversation.
 
-This is attempt {state.executor.retry_count + 1}. Rewrite each file that needs correction in full —
+This is attempt {state.retry_fix + 1}. Rewrite each flagged file in full —
 do not patch around the error superficially; ensure the fix addresses the actual root cause."""
