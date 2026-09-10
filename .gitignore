@@ -129,3 +129,21 @@ temp/
 generated/
 outputs/
 reports/
+
+# Phoenix generated projects: keep only the portfolio projects below.
+# New/generated projects remain local and are not included in Git commits.
+/generated_projects/*
+!/generated_projects/accounts_manager/
+!/generated_projects/accounts_manager/**
+!/generated_projects/library_management_system/
+!/generated_projects/library_management_system/**
+
+# Never commit Python cache files produced inside the retained projects.
+/generated_projects/**/__pycache__/
+/generated_projects/**/*.py[cod]
+
+# JARVIS project context
+.jarvis/
+
+# Keep only the explicitly selected generated projects in version control.
+# The exceptions above intentionally allow these two projects to be committed.
