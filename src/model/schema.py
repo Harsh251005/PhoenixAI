@@ -33,6 +33,25 @@ class FixOutput(BaseModel):
     )
 
 
+class TerminalCommand(BaseModel):
+    command: list[str] = Field(
+        description=(
+            "Terminal command as a list of arguments. "
+            "Example: ['uv', 'init'] or "
+            "['uv', 'add', 'fastapi', 'uvicorn'] or "
+            "['uv', 'run', 'main.py']."
+        )
+    )
+
+    stdin: str | None = Field(
+        default=None,
+        description=(
+            "Optional stdin that should be passed to the command. "
+            "Leave as None for non-interactive commands."
+        )
+    )
+
+
 class ProjectOutput(BaseModel):
     project_name: str = Field(
         description=(
@@ -66,7 +85,12 @@ class ProjectOutput(BaseModel):
             "Provide the complete path for the file"
         )
     )
+    terminal_commands: list[TerminalCommand] = Field(
+        default_factory=list,
+        description="Commands required to build and run the project."
+    )
     file_inputs: List[str] = Field(
+        default_factory=list,
         description=(
             "Concrete stdin values needed to run this program to completion via subprocess, "
             "in the exact order the program's input() calls will consume them. "

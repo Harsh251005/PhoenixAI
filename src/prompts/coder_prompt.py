@@ -70,7 +70,9 @@ def build_coder_prompt(state) -> str:
     if state.executor is None or state.executor.error_summary is None:
         return f"Task: {state.user_input}"
 
-    flagged_paths = state.critic.problematic_files
+    flagged_paths = state.critic.problematic_files if state.critic is not None else []
+    if not flagged_paths:
+        flagged_paths = [f.file_path for f in state.project.files]
 
     files_to_fix = "\n\n".join(
         f"--- FILE: {f.file_path} ---\n{f.file_content}"

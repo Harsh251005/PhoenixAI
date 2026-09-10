@@ -19,10 +19,16 @@ class Settings:
 
         self.PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent
         self.GENERATED_PROJECTS_DIR: Path = self.PROJECT_ROOT / "generated_projects"
+        self.DOCKER_EXECUTOR_IMAGE: str = os.getenv("DOCKER_EXECUTOR_IMAGE", "python:3.12-slim")
+        self.DOCKER_NETWORK: str = os.getenv("DOCKER_NETWORK", "none")
+        self.DOCKER_MEMORY: str = os.getenv("DOCKER_MEMORY", "256m")
+        self.DOCKER_CPUS: str = os.getenv("DOCKER_CPUS", "0.5")
+        self.DOCKER_PIDS_LIMIT: int = int(os.getenv("DOCKER_PIDS_LIMIT", "64"))
 
         self.llm: ChatOpenAI = ChatOpenAI(
             api_key=self.OPENAI_API_KEY,
             model=self.OPENAI_MODEL_NAME,
+            service_tier="flex",
         )
 
     @staticmethod

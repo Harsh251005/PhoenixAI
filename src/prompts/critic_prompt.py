@@ -47,7 +47,7 @@ def build_critic_prompt(state) -> str:
         raise ValueError("[CRITIC PROMPT] Project is None")
 
     files_summary = "\n\n".join(
-        f"--- FILE: {f.file_path} ---\n{f.file_description}"
+        f"--- FILE: {f.file_path} ---\n{f.file_description}\n{f.file_content}"
         for f in state.project.files
     )
 
