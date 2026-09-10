@@ -1,10 +1,7 @@
 from src.graph import graph_builder
 from src.model.schema import State
-import json
 
 from rich.console import Console
-from rich.panel import Panel
-from rich.syntax import Syntax
 from rich.text import Text
 
 console = Console()
@@ -32,34 +29,38 @@ def get_user_input() -> str:
         console.print("[red]⚠️  Please enter a task description.[/red]")
 
 
+def _get(state, name: str, default=None):
+    """Read an attribute from state whether it's a State instance or a plain dict."""
+    return state.get(name, default) if isinstance(state, dict) else getattr(state, name, default)
+
+
 def run_task(graph, task: str) -> State:
-    """Invoke the graph for a single task and return the final state."""
+    """Invoke the graph for a single task, report the outcome, and return the final state."""
     console.print(f'\n[bold green]🚀 Generating:[/bold green] "{task}"...\n')
 
     try:
         final_state = graph.invoke(State(user_input=task))
-        console.print("\n[bold green]✅ Done![/bold green] Check the generated project folder.\n")
-        return final_state
-
     except Exception as e:
         console.print(f"\n[bold red]❌ Something went wrong:[/bold red] {e}\n")
         raise
 
+    executor = _get(final_state, "executor")
+    success = _get(executor, "success", False) if executor is not None else False
 
-def print_final_state(final_state) -> None:
-    """Pretty-print the full final state as syntax-highlighted JSON."""
-    data = final_state.model_dump(mode="json") if hasattr(final_state, "model_dump") else dict(final_state)
-    json_str = json.dumps(data, indent=4, default=str)
-
-    syntax = Syntax(json_str, "json", theme="monokai", line_numbers=False, word_wrap=True)
-    console.print(
-        Panel(
-            syntax,
-            title="[bold white]FINAL AGENT STATE[/bold white]",
-            border_style="cyan",
-            expand=True,
+    if success:
+        console.print("\n[bold green]✅ Done![/bold green] Check the generated project folder.\n")
+    else:
+        critic = _get(final_state, "critic")
+        reasoning = _get(critic, "reasoning", None) if critic is not None else None
+        retry_fix = _get(final_state, "retry_fix", 0)
+        console.print(
+            f"\n[bold red]❌ Gave up after {retry_fix} retry attempt(s).[/bold red] "
+            "The generated project still fails to execute."
         )
-    )
+        if reasoning:
+            console.print(f"[yellow]Last critic reasoning:[/yellow] {reasoning}\n")
+
+    return final_state
 
 
 def main() -> None:
@@ -69,10 +70,9 @@ def main() -> None:
     graph = graph_builder()
 
     task = get_user_input()
-    final_state = run_task(graph, task)
+    run_task(graph, task)
 
     console.print()
-    print_final_state(final_state)
 
 
 if __name__ == "__main__":
