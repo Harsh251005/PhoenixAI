@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 
@@ -65,11 +66,16 @@ def _docker_args(command: TerminalCommand, cwd: Path, timeout: int) -> list[str]
         "--memory", settings.DOCKER_MEMORY, "--cpus", settings.DOCKER_CPUS,
         "--pids-limit", str(settings.DOCKER_PIDS_LIMIT),
         "--read-only", "--cap-drop=ALL", "--security-opt", "no-new-privileges",
-        # The generated project is mounted read-only. Use Docker's automatic
-        # user when available; a fixed UID can make host-created files
-        # unreadable on SELinux-enabled systems (e.g. Fedora/RHEL).
-        "-v", f"{cwd}:/app:ro,Z", "-w", "/app", image,
     ]
+    if hasattr(os, "getuid"):
+        # Run as the host user instead of the image's default (root). With
+        # --cap-drop=ALL, root loses CAP_DAC_OVERRIDE and can no longer write
+        # into the host-owned project mount, so matching the host UID/GID is
+        # what actually lets generated code persist its own data files.
+        args += ["--user", f"{os.getuid()}:{os.getgid()}"]
+    # Container root filesystem is read-only; the project mount stays writable
+    # so generated code can persist data files as instructed by the coder prompt.
+    args += ["-v", f"{cwd}:/app:Z", "-w", "/app", image]
     return args + command.command
 
 
