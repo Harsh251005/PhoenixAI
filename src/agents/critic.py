@@ -39,7 +39,7 @@ def route_from_critic_to_coder(state: State) -> str:
     if state.critic.status == "pass":
         return "DONE"
 
-    elif state.retry_fix >= 3:
+    elif state.retry_fix >= 5:
         return "GIVE_UP"
 
     else:
