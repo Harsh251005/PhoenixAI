@@ -147,3 +147,7 @@ reports/
 
 # Keep only the explicitly selected generated projects in version control.
 # The exceptions above intentionally allow these two projects to be committed.
+
+# Local interview prep / session notes
+INTERVIEW_PREP.md
+SESSION_CONTEXT.md
