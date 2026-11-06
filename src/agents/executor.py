@@ -1,5 +1,6 @@
 import os
 import subprocess
+import uuid
 from pathlib import Path
 
 from langsmith import get_current_run_tree, traceable
@@ -59,10 +60,10 @@ def _commands_with_inputs(commands: list[TerminalCommand], inputs: list[str]) ->
     return updated
 
 
-def _docker_args(command: TerminalCommand, cwd: Path, timeout: int) -> list[str]:
+def _docker_args(command: TerminalCommand, cwd: Path, name: str) -> list[str]:
     image = settings.DOCKER_EXECUTOR_IMAGE
     args = [
-        "docker", "run", "--rm", "--network", settings.DOCKER_NETWORK,
+        "docker", "run", "--rm", "--name", name, "--network", settings.DOCKER_NETWORK,
         "--memory", settings.DOCKER_MEMORY, "--cpus", settings.DOCKER_CPUS,
         "--pids-limit", str(settings.DOCKER_PIDS_LIMIT),
         "--read-only", "--cap-drop=ALL", "--security-opt", "no-new-privileges",
@@ -87,8 +88,11 @@ def _docker_args(command: TerminalCommand, cwd: Path, timeout: int) -> list[str]
 
 @traceable(run_type="tool", name="run_docker")
 def run_docker(command: TerminalCommand, cwd: Path, timeout: int) -> dict:
+    # A unique name lets us kill the container on timeout: subprocess only kills
+    # the docker CLI, and the container itself would keep running.
+    name = f"phoenix-exec-{uuid.uuid4().hex[:12]}"
     kwargs = {
-        "args": _docker_args(command, cwd, timeout),
+        "args": _docker_args(command, cwd, name),
         "capture_output": True,
         "text": True,
         "timeout": timeout,
@@ -100,7 +104,12 @@ def run_docker(command: TerminalCommand, cwd: Path, timeout: int) -> dict:
         # input() without scripted stdin should fail fast on EOF rather than
         # block on the CLI's terminal until the timeout expires.
         kwargs["stdin"] = subprocess.DEVNULL
-    result = subprocess.run(**kwargs)
+    try:
+        result = subprocess.run(**kwargs)
+    except subprocess.TimeoutExpired:
+        # --rm removes the container once it is killed.
+        subprocess.run(["docker", "kill", name], capture_output=True, check=False)
+        raise
     return {"stdout": result.stdout, "stderr": result.stderr, "exit_code": result.returncode}
 
 
