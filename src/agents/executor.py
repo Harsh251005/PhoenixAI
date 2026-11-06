@@ -73,6 +73,12 @@ def _docker_args(command: TerminalCommand, cwd: Path, timeout: int) -> list[str]
         # into the host-owned project mount, so matching the host UID/GID is
         # what actually lets generated code persist its own data files.
         args += ["--user", f"{os.getuid()}:{os.getgid()}"]
+    if command.stdin is not None:
+        # `docker run` only forwards stdin to the container when -i is set.
+        # Without it the scripted stdin from file_inputs is written to the
+        # docker CLI and dropped, and the program dies on EOFError at its
+        # first input() call.
+        args.append("-i")
     # Container root filesystem is read-only; the project mount stays writable
     # so generated code can persist data files as instructed by the coder prompt.
     args += ["-v", f"{cwd}:/app:Z", "-w", "/app", image]
@@ -89,6 +95,11 @@ def run_docker(command: TerminalCommand, cwd: Path, timeout: int) -> dict:
     }
     if command.stdin is not None:
         kwargs["input"] = command.stdin
+    else:
+        # Never inherit the parent's stdin: a generated program that calls
+        # input() without scripted stdin should fail fast on EOF rather than
+        # block on the CLI's terminal until the timeout expires.
+        kwargs["stdin"] = subprocess.DEVNULL
     result = subprocess.run(**kwargs)
     return {"stdout": result.stdout, "stderr": result.stderr, "exit_code": result.returncode}
 
