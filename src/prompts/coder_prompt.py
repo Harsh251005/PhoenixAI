@@ -38,6 +38,9 @@ DEPENDENCIES
 ERROR HANDLING
 - Wrap all I/O, network, and parsing code in try/except with specific, meaningful error messages.
 - Never let an exception crash the program silently or with a bare traceback dump.
+- main.py's top-level handler must catch unexpected exceptions, print a clear one-line message to
+  stderr, and then call `sys.exit(1)`. Never swallow a fatal error and exit with status 0: a
+  non-zero exit code is how the program's failure is detected.
 
 DATA PERSISTENCE
 - If structured data must persist, use JSON files created/managed at runtime — never author data files yourself.
